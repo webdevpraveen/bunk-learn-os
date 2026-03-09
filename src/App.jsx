@@ -6,6 +6,8 @@ import ProcessTable from './components/ProcessTable';
 import GanttChart from './components/GanttChart';
 import MemoryGrid from './components/MemoryGrid';
 import DiskChart from './components/DiskChart';
+import CalculationTable from './components/CalculationTable';
+import Footer from './components/Footer';
 
 import {
     calculateFCFS,
@@ -209,35 +211,7 @@ export default function App() {
                             </div>
 
                             {/* CPU Results Map */}
-                            <div className="border border-slate-300 bg-white p-4 md:p-6 rounded-none w-full overflow-x-auto">
-                                <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-900">Telemetry: Turnaround & Wait</h3>
-                                <table className="w-full text-xs font-mono text-left">
-                                    <thead>
-                                        <tr className="border-b-2 border-slate-300 text-slate-500 uppercase tracking-wider">
-                                            <th className="py-2 px-2 border-r border-slate-200">Proc_ID</th>
-                                            <th className="py-2 px-2 border-r border-slate-200">Arr_Time</th>
-                                            <th className="py-2 px-2 border-r border-slate-200">Burst</th>
-                                            <th className="py-2 px-2 border-r border-slate-200">Comp</th>
-                                            <th className="py-2 px-2 border-r border-slate-200">TAT</th>
-                                            <th className="py-2 px-2">Wait</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.values(cpuResults.reduce((acc, curr) => {
-                                            if (!curr.isIdle) acc[curr.id] = curr; return acc;
-                                        }, {})).map((r, i) => (
-                                            <tr key={i} className="border-b border-slate-200 hover:bg-slate-50">
-                                                <td className="py-2 px-2 font-bold text-slate-900 border-r border-slate-200">{r.id}</td>
-                                                <td className="py-2 px-2 text-slate-700 border-r border-slate-200">{r.arrivalTime}</td>
-                                                <td className="py-2 px-2 text-slate-700 border-r border-slate-200">{r.burstTime}</td>
-                                                <td className="py-2 px-2 text-slate-700 border-r border-slate-200">{r.finalCompletion || r.completionTime}</td>
-                                                <td className="py-2 px-2 text-slate-900 font-bold border-r border-slate-200">{r.turnaroundTime}</td>
-                                                <td className="py-2 px-2 text-slate-900 font-bold">{r.waitingTime}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <CalculationTable results={cpuResults} />
                         </section>
                     </>
                 )}
@@ -368,6 +342,7 @@ export default function App() {
                 )}
 
             </main>
+            <Footer />
         </div>
     );
 }
