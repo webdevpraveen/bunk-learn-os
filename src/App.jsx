@@ -14,7 +14,7 @@ import {
 } from './utils/SchedulerLogic';
 
 export default function App() {
-    const [activeTab, setActiveTab] = useState('CPU');
+    const [activeTab, setActiveTab] = useState('Memory');
 
     // --- CPU STATE ---
     const [processes, setProcesses] = useState([
@@ -30,20 +30,28 @@ export default function App() {
 
     // --- MEMORY STATE ---
     const [partitions, setPartitions] = useState([
-        { id: 'P1', size: 100 }, { id: 'P2', size: 500 }, { id: 'P3', size: 200 }, { id: 'P4', size: 300 }, { id: 'P5', size: 600 }
+        { id: 'M1', size: 100 }, { id: 'M2', size: 500 }, { id: 'M3', size: 200 }, { id: 'M4', size: 300 }, { id: 'M5', size: 600 }
     ]);
     const [memRequests, setMemRequests] = useState([
         { id: 'R1', size: 212 }, { id: 'R2', size: 417 }, { id: 'R3', size: 112 }, { id: 'R4', size: 426 }
     ]);
     const [memAlgo, setMemAlgo] = useState('FirstFit');
 
+    // Memory Input Form State
+    const [newPartitionSize, setNewPartitionSize] = useState('');
+    const [newMemReqSize, setNewMemReqSize] = useState('');
+
     // --- DISK STATE ---
     const [initialHead, setInitialHead] = useState(50);
-    const [trackRequests, setTrackRequests] = useState([98, 183, 37, 122, 14, 124, 65, 67]);
+    const [trackRequests, setTrackRequests] = useState([
+        { id: 'T1', track: 98 }, { id: 'T2', track: 183 }, { id: 'T3', track: 37 },
+        { id: 'T4', track: 122 }, { id: 'T5', track: 14 }, { id: 'T6', track: 124 },
+        { id: 'T7', track: 65 }, { id: 'T8', track: 67 }
+    ]);
     const [diskAlgo, setDiskAlgo] = useState('SSTF');
 
-    const [simResults, setSimResults] = useState(false);
-
+    // Disk Input Form State
+    const [newTrackReq, setNewTrackReq] = useState('');
 
     // CPU Simulation Effects
     useEffect(() => {
@@ -89,34 +97,60 @@ export default function App() {
     const addProcess = (proc) => setProcesses((prev) => [...prev, { id: proc.name, arrivalTime: proc.arrival, burstTime: proc.burst }]);
     const deleteProcess = (id) => setProcesses((prev) => prev.filter((p) => p.id !== id));
 
+    // Memory Handlers
+    const handleAddPartition = (e) => {
+        e.preventDefault();
+        if (!newPartitionSize || isNaN(newPartitionSize)) return;
+        setPartitions(prev => [...prev, { id: `M${prev.length + 1}`, size: Number(newPartitionSize) }]);
+        setNewPartitionSize('');
+    };
+    const handleDeletePartition = (id) => setPartitions(prev => prev.filter(p => p.id !== id));
+
+    const handleAddMemReq = (e) => {
+        e.preventDefault();
+        if (!newMemReqSize || isNaN(newMemReqSize)) return;
+        setMemRequests(prev => [...prev, { id: `R${prev.length + 1}`, size: Number(newMemReqSize) }]);
+        setNewMemReqSize('');
+    };
+    const handleDeleteMemReq = (id) => setMemRequests(prev => prev.filter(p => p.id !== id));
+
+    // Disk Handlers
+    const handleAddTrack = (e) => {
+        e.preventDefault();
+        if (!newTrackReq || isNaN(newTrackReq)) return;
+        setTrackRequests(prev => [...prev, { id: `T${prev.length + 1}`, track: Number(newTrackReq) }]);
+        setNewTrackReq('');
+    };
+    const handleDeleteTrack = (id) => setTrackRequests(prev => prev.filter(t => t.id !== id));
+
     const TABS = [
-        { id: 'CPU', label: 'CPU Scheduling', icon: <Cpu size={16} /> },
-        { id: 'Memory', label: 'Memory Allocation', icon: <MemoryStick size={16} /> },
-        { id: 'Disk', label: 'Disk Scheduling', icon: <HardDrive size={16} /> },
+        { id: 'CPU', label: 'CPU Scheduling', icon: <Cpu size={14} /> },
+        { id: 'Memory', label: 'Memory Allocation', icon: <MemoryStick size={14} /> },
+        { id: 'Disk', label: 'Disk Scheduling', icon: <HardDrive size={14} /> },
     ];
 
     return (
-        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
-            {/* ── Top Nav ── */}
-            <header className="flex items-center gap-4 border-b border-slate-300 bg-white px-6 py-4">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-slate-800 text-white flex items-center justify-center rounded-sm">
-                        <Cpu size={18} />
+        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-mono tracking-tight selection:bg-slate-300">
+            {/* ── Brutalist Top Nav ── */}
+            <header className="flex items-center justify-between border-b-2 border-slate-900 bg-white px-6 py-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-slate-900 text-white flex items-center justify-center rounded-none shadow-none">
+                        <Cpu size={18} strokeWidth={2.5} />
                     </div>
-                    <h1 className="text-sm font-semibold tracking-wide text-slate-900">
-                        Bunk &amp; Learn OS
+                    <h1 className="text-base font-bold uppercase tracking-widest text-slate-900">
+                        Bunk_&_Learn_OS
                     </h1>
                 </div>
 
-                {/* Tabs */}
-                <nav className="ml-10 flex gap-1">
+                {/* State Tabs */}
+                <nav className="flex gap-2">
                     {TABS.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => { setActiveTab(tab.id); handleReset(); }}
-                            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors rounded-sm border ${activeTab === tab.id
-                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                                    : 'border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-none rounded-none border-2 ${activeTab === tab.id
+                                    ? 'border-slate-900 bg-slate-900 text-white'
+                                    : 'border-transparent text-slate-600 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900'
                                 }`}
                         >
                             {tab.icon}
@@ -132,39 +166,39 @@ export default function App() {
                 {/* === CPU VIEW === */}
                 {activeTab === 'CPU' && (
                     <>
-                        <aside className="w-full lg:w-80 border border-slate-300 bg-white p-5 rounded-sm flex-shrink-0 self-start">
+                        <aside className="w-full lg:w-80 border border-slate-300 bg-white p-5 rounded-none flex-shrink-0 self-start">
                             <div className="mb-6">
-                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">Algorithm</label>
+                                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-900">Algorithm Subroutine</label>
                                 <select
                                     value={cpuAlgo}
                                     onChange={e => setCpuAlgo(e.target.value)}
-                                    className="w-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500 rounded-sm"
+                                    className="w-full border-2 border-slate-300 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 outline-none focus:border-indigo-600 rounded-none cursor-pointer"
                                 >
-                                    <option value="FCFS">First-Come, First-Served (FCFS)</option>
-                                    <option value="SJF">Shortest Job First (Non-Preemptive)</option>
-                                    <option value="RR">Round Robin (TQ=2)</option>
+                                    <option value="FCFS">FCFS_QUEUE</option>
+                                    <option value="SJF">SJF_NON_PREEMPTIVE</option>
+                                    <option value="RR">ROUND_ROBIN (TQ=2)</option>
                                 </select>
                             </div>
                             <ProcessInput onAdd={addProcess} />
-                            <div className="mt-6 border-t border-slate-200 pt-6">
+                            <div className="mt-6 border-t-2 border-slate-200 pt-6">
                                 <ProcessTable processes={processes.map(p => ({ id: p.id, name: p.id, arrival: p.arrivalTime, burst: p.burstTime }))} onDelete={deleteProcess} />
                             </div>
                         </aside>
 
                         <section className="flex-1 space-y-6">
-                            <div className="flex items-center justify-between border border-slate-300 bg-white p-4 rounded-sm">
-                                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Simulation Controls</h2>
+                            <div className="flex items-center justify-between border border-slate-300 bg-white p-4 rounded-none">
+                                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900">Simulation_Runtime</h2>
                                 <div className="flex gap-2">
                                     {!isPlaying ? (
-                                        <button onClick={handlePlay} className="inline-flex items-center gap-1.5 border border-indigo-600 bg-indigo-600 text-white px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-indigo-700 transition-colors rounded-sm cursor-pointer disabled:opacity-50">
+                                        <button onClick={handlePlay} className="inline-flex items-center gap-1.5 border-2 border-slate-900 bg-slate-900 text-white px-4 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-slate-800 hover:translate-y-px transition-all rounded-none cursor-pointer disabled:opacity-50">
                                             <Play size={14} /> Play
                                         </button>
                                     ) : (
-                                        <button onClick={handlePause} className="inline-flex items-center gap-1.5 border border-slate-300 bg-white text-slate-700 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-slate-50 transition-colors rounded-sm cursor-pointer">
+                                        <button onClick={handlePause} className="inline-flex items-center gap-1.5 border-2 border-slate-300 bg-white text-slate-900 px-4 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-slate-50 hover:translate-y-px transition-all rounded-none cursor-pointer">
                                             <Pause size={14} /> Pause
                                         </button>
                                     )}
-                                    <button onClick={handleReset} className="inline-flex items-center gap-1.5 border border-slate-300 bg-white text-slate-700 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-slate-50 transition-colors rounded-sm cursor-pointer">
+                                    <button onClick={handleReset} className="inline-flex items-center gap-1.5 border-2 border-slate-300 bg-white text-slate-900 px-4 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-slate-50 hover:translate-y-px transition-all rounded-none cursor-pointer">
                                         <RotateCcw size={14} /> Reset
                                     </button>
                                 </div>
@@ -173,31 +207,30 @@ export default function App() {
                             <GanttChart results={cpuResults} revealedCount={revealedCount} />
 
                             {/* CPU Results Map */}
-                            <div className="border border-slate-300 bg-white p-6 rounded-sm">
-                                <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">Final Turnaround & Waiting Times</h3>
-                                <table className="w-full text-sm">
+                            <div className="border border-slate-300 bg-white p-6 rounded-none">
+                                <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-900">Telemetry: Turnaround & Wait</h3>
+                                <table className="w-full text-xs font-mono text-left">
                                     <thead>
-                                        <tr className="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wider text-slate-400">
-                                            <th className="py-2 pr-4">Proc</th>
-                                            <th className="py-2 pr-4">Arr</th>
-                                            <th className="py-2 pr-4">Burst</th>
-                                            <th className="py-2 pr-4">Comp</th>
-                                            <th className="py-2 pr-4">TAT</th>
-                                            <th className="py-2">WT</th>
+                                        <tr className="border-b-2 border-slate-300 text-slate-500 uppercase tracking-wider">
+                                            <th className="py-2 px-2 border-r border-slate-200">Proc_ID</th>
+                                            <th className="py-2 px-2 border-r border-slate-200">Arr_Time</th>
+                                            <th className="py-2 px-2 border-r border-slate-200">Burst</th>
+                                            <th className="py-2 px-2 border-r border-slate-200">Comp</th>
+                                            <th className="py-2 px-2 border-r border-slate-200">TAT</th>
+                                            <th className="py-2 px-2">Wait</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {/* Reduce results to unique processes for the recap table */}
                                         {Object.values(cpuResults.reduce((acc, curr) => {
                                             if (!curr.isIdle) acc[curr.id] = curr; return acc;
                                         }, {})).map((r, i) => (
-                                            <tr key={i} className="border-b border-slate-100">
-                                                <td className="py-2 pr-4 font-medium text-slate-700">{r.id}</td>
-                                                <td className="py-2 pr-4 text-slate-600">{r.arrivalTime}</td>
-                                                <td className="py-2 pr-4 text-slate-600">{r.burstTime}</td>
-                                                <td className="py-2 pr-4 text-slate-600">{r.finalCompletion || r.completionTime}</td>
-                                                <td className="py-2 pr-4 text-slate-600 font-medium">{r.turnaroundTime}</td>
-                                                <td className="py-2 text-slate-600 font-medium">{r.waitingTime}</td>
+                                            <tr key={i} className="border-b border-slate-200 hover:bg-slate-50">
+                                                <td className="py-2 px-2 font-bold text-slate-900 border-r border-slate-200">{r.id}</td>
+                                                <td className="py-2 px-2 text-slate-700 border-r border-slate-200">{r.arrivalTime}</td>
+                                                <td className="py-2 px-2 text-slate-700 border-r border-slate-200">{r.burstTime}</td>
+                                                <td className="py-2 px-2 text-slate-700 border-r border-slate-200">{r.finalCompletion || r.completionTime}</td>
+                                                <td className="py-2 px-2 text-slate-900 font-bold border-r border-slate-200">{r.turnaroundTime}</td>
+                                                <td className="py-2 px-2 text-slate-900 font-bold">{r.waitingTime}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -210,37 +243,67 @@ export default function App() {
                 {/* === MEMORY VIEW === */}
                 {activeTab === 'Memory' && (
                     <>
-                        <aside className="w-full lg:w-80 border border-slate-300 bg-white p-5 rounded-sm flex-shrink-0 self-start">
+                        <aside className="w-full lg:w-80 border border-slate-300 bg-white p-5 rounded-none flex-shrink-0 self-start">
                             <div className="mb-6">
-                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">Allocation Algorithm</label>
+                                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-900">Allocation Subroutine</label>
                                 <select
                                     value={memAlgo}
                                     onChange={e => setMemAlgo(e.target.value)}
-                                    className="w-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500 rounded-sm"
+                                    className="w-full border-2 border-slate-300 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 outline-none focus:border-indigo-600 rounded-none cursor-pointer"
                                 >
-                                    <option value="FirstFit">First Fit</option>
-                                    <option value="BestFit">Best Fit</option>
+                                    <option value="FirstFit">FIRST_FIT</option>
+                                    <option value="BestFit">BEST_FIT</option>
                                 </select>
                             </div>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Memory Partitions (KB)</h3>
-                                    <div className="text-sm font-mono text-slate-600 bg-slate-50 p-3 border border-slate-200 rounded-sm">
-                                        {partitions.map(p => p.size).join(', ')}
-                                    </div>
+                            {/* Memory Partitions Inputs */}
+                            <div className="mb-6 space-y-3">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-200 pb-2">Physical Blocks (KB)</h3>
+                                <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2">
+                                    {partitions.map(p => (
+                                        <div key={p.id} className="flex items-center justify-between border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
+                                            <span className="font-bold text-slate-900 w-12">{p.id}</span>
+                                            <span className="text-slate-600">{p.size}K</span>
+                                            <button onClick={() => handleDeletePartition(p.id)} className="text-red-600 hover:text-red-800 font-bold font-sans px-2 cursor-pointer">✕</button>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div>
-                                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Process Requests (KB)</h3>
-                                    <div className="text-sm font-mono text-slate-600 bg-slate-50 p-3 border border-slate-200 rounded-sm">
-                                        {memRequests.map(r => `${r.id}(${r.size})`).join(', ')}
-                                    </div>
-                                </div>
+                                <form onSubmit={handleAddPartition} className="flex gap-2 mt-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Size (KB)"
+                                        value={newPartitionSize}
+                                        onChange={e => setNewPartitionSize(e.target.value)}
+                                        className="flex-1 w-full border border-slate-300 px-2 py-1 text-xs outline-none focus:border-indigo-600 rounded-none"
+                                    />
+                                    <button type="submit" className="bg-slate-900 text-white px-3 py-1 text-xs font-bold uppercase hover:bg-slate-800 transition-colors cursor-pointer rounded-none border border-slate-900">Add</button>
+                                </form>
                             </div>
 
-                            <p className="mt-4 text-xs text-slate-400 italic">
-                                Note: Editing inputs dynamically will be supported in Phase 4. Using fixed dataset for visualization preview.
-                            </p>
+                            {/* Process Requests Inputs */}
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-200 pb-2">Process Requests (KB)</h3>
+                                <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2">
+                                    {memRequests.map(r => (
+                                        <div key={r.id} className="flex items-center justify-between border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
+                                            <span className="font-bold text-slate-900 w-12">{r.id}</span>
+                                            <span className="text-slate-600">{r.size}K</span>
+                                            <button onClick={() => handleDeleteMemReq(r.id)} className="text-red-600 hover:text-red-800 font-bold font-sans px-2 cursor-pointer">✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <form onSubmit={handleAddMemReq} className="flex gap-2 mt-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Requirement (KB)"
+                                        value={newMemReqSize}
+                                        onChange={e => setNewMemReqSize(e.target.value)}
+                                        className="flex-1 w-full border border-slate-300 px-2 py-1 text-xs outline-none focus:border-indigo-600 rounded-none"
+                                    />
+                                    <button type="submit" className="bg-slate-900 text-white px-3 py-1 text-xs font-bold uppercase hover:bg-slate-800 transition-colors cursor-pointer rounded-none border border-slate-900">Add</button>
+                                </form>
+                            </div>
+
                         </aside>
                         <section className="flex-1">
                             <MemoryGrid partitions={partitions} requests={memRequests} algorithm={memAlgo} />
@@ -251,37 +314,51 @@ export default function App() {
                 {/* === DISK VIEW === */}
                 {activeTab === 'Disk' && (
                     <>
-                        <aside className="w-full lg:w-80 border border-slate-300 bg-white p-5 rounded-sm flex-shrink-0 self-start">
+                        <aside className="w-full lg:w-80 border border-slate-300 bg-white p-5 rounded-none flex-shrink-0 self-start">
                             <div className="mb-6">
-                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">Disk Algorithm</label>
+                                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-900">Head Tracking Subroutine</label>
                                 <select
                                     value={diskAlgo}
                                     onChange={e => setDiskAlgo(e.target.value)}
-                                    className="w-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500 rounded-sm"
+                                    className="w-full border-2 border-slate-300 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 outline-none focus:border-indigo-600 rounded-none cursor-pointer"
                                 >
-                                    <option value="SSTF">Shortest Seek Time First (SSTF)</option>
-                                    <option value="SCAN">SCAN (Elevator)</option>
+                                    <option value="SSTF">SHORTEST_SEEK_TIME (SSTF)</option>
+                                    <option value="SCAN">ELEVATOR_SCAN</option>
                                 </select>
                             </div>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Initial Head Position</h3>
-                                    <div className="text-sm font-mono text-slate-600 bg-slate-50 p-3 border border-slate-200 rounded-sm">
-                                        {initialHead}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Track Request Queue</h3>
-                                    <div className="text-sm font-mono text-slate-600 bg-slate-50 p-3 border border-slate-200 rounded-sm">
-                                        {trackRequests.join(' → ')}
-                                    </div>
-                                </div>
+                            <div className="mb-6">
+                                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-900">Initial Head Anchor</label>
+                                <input
+                                    type="number"
+                                    value={initialHead}
+                                    onChange={e => setInitialHead(Number(e.target.value))}
+                                    className="w-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-600 rounded-none"
+                                />
                             </div>
 
-                            <p className="mt-4 text-xs text-slate-400 italic">
-                                Note: Editing inputs dynamically will be supported in Phase 4. Using fixed dataset for visualization preview.
-                            </p>
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-200 pb-2">Track Traversal Queue</h3>
+                                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2">
+                                    {trackRequests.map(t => (
+                                        <div key={t.id} className="flex items-center justify-between border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
+                                            <span className="font-bold text-slate-900 w-12">{t.id}</span>
+                                            <span className="text-slate-600">Track {t.track}</span>
+                                            <button onClick={() => handleDeleteTrack(t.id)} className="text-red-600 hover:text-red-800 font-bold font-sans px-2 cursor-pointer">✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <form onSubmit={handleAddTrack} className="flex gap-2 mt-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Track #"
+                                        value={newTrackReq}
+                                        onChange={e => setNewTrackReq(e.target.value)}
+                                        className="flex-1 w-full border border-slate-300 px-2 py-1 text-xs outline-none focus:border-indigo-600 rounded-none"
+                                    />
+                                    <button type="submit" className="bg-slate-900 text-white px-3 py-1 text-xs font-bold uppercase hover:bg-slate-800 transition-colors cursor-pointer rounded-none border border-slate-900">Add</button>
+                                </form>
+                            </div>
                         </aside>
                         <section className="flex-1">
                             <DiskChart initialHead={initialHead} requests={trackRequests} algorithm={diskAlgo} />
