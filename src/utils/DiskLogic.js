@@ -97,3 +97,25 @@ export function calculateSCAN(initialHead, requests, maxTrack = 199) {
 
     return { sequence, totalMovement };
 }
+
+/**
+ * 3. First-Come, First-Served (FCFS)
+ * Requests are serviced in the order they arrive in the queue.
+ * 
+ * @param {Number} initialHead - Starting point of the disk head
+ * @param {Array<Number>} requests - Array of track requests
+ * @returns {Object} { sequence: Array, totalMovement: Number }
+ */
+export function calculateFCFS(initialHead, requests) {
+    if (!requests || requests.length === 0) return { sequence: [initialHead], totalMovement: 0 };
+
+    const sequence = [initialHead, ...requests];
+    let totalMovement = 0;
+
+    for (let i = 0; i < sequence.length - 1; i++) {
+        totalMovement += Math.abs(sequence[i] - sequence[i + 1]);
+    }
+
+    return { sequence, totalMovement };
+}
+

@@ -1,6 +1,6 @@
 /**
  * Advanced CPU Scheduling Algorithms Logic
- * This module exports FCFS, SJF, and Round Robin functions.
+ * This module exports FCFS, SJF, RR, SRTF, HRRN, and LCN functions.
  * All algorithms take an array of processes: { id: 'P1', arrivalTime: 0, burstTime: 5 }
  * and return an array of scheduled execution blocks containing:
  * { id, startTime, completionTime, turnaroundTime, waitingTime, isIdle (optional) }
@@ -245,6 +245,319 @@ export function calculateRoundRobin(processes, timeQuantum = 2) {
                     procs[idx].inQueue = true;
                     idx++;
                 }
+            }
+        }
+    }
+
+    return results;
+}
+
+/**
+ * 4. Shortest Remaining Time First (SRTF) - Preemptive
+ * The preemptive version of SJF. The CPU is allocated to the process 
+ * with the shortest remaining burst time at any given point.
+ */
+export function calculateSRTF(processes) {
+    if (!processes || processes.length === 0) return [];
+
+    const results = [];
+    let currentTime = 0;
+    let completedCount = 0;
+
+    const procs = [...processes].map(p => ({
+        ...p,
+        remainingBurst: p.burstTime,
+        isCompleted: false,
+    }));
+
+    let lastProcessId = null;
+    let sliceStart = 0;
+
+    while (completedCount < procs.length) {
+        // Find available processes
+        const available = procs.filter(p => !p.isCompleted && p.arrivalTime <= currentTime);
+
+        if (available.length > 0) {
+            // Pick process with shortest remaining burst
+            available.sort((a, b) => {
+                if (a.remainingBurst === b.remainingBurst) return a.arrivalTime - b.arrivalTime;
+                return a.remainingBurst - b.remainingBurst;
+            });
+
+            const selected = available[0];
+
+            // If we switched processes, record the previous one
+            if (lastProcessId !== null && lastProcessId !== selected.id) {
+                const prevProc = procs.find(p => p.id === lastProcessId);
+                results.push({
+                    id: lastProcessId,
+                    arrivalTime: prevProc.arrivalTime,
+                    burstTime: prevProc.burstTime,
+                    startTime: sliceStart,
+                    completionTime: currentTime,
+                    isIdle: false
+                });
+                sliceStart = currentTime;
+            } else if (lastProcessId === null) {
+                sliceStart = currentTime;
+            }
+
+            lastProcessId = selected.id;
+            selected.remainingBurst--;
+            currentTime++;
+
+            if (selected.remainingBurst === 0) {
+                selected.isCompleted = true;
+                completedCount++;
+                
+                // Record completion metrics
+                const completionTime = currentTime;
+                const turnaround = completionTime - selected.arrivalTime;
+                const waiting = turnaround - selected.burstTime;
+
+                // Push final slice for this process
+                results.push({
+                    id: selected.id,
+                    arrivalTime: selected.arrivalTime,
+                    burstTime: selected.burstTime,
+                    startTime: sliceStart,
+                    completionTime: completionTime,
+                    isIdle: false,
+                    finalCompletion: completionTime,
+                    turnaroundTime: turnaround,
+                    waitingTime: waiting
+                });
+
+                // Update all previous slices of this process with the same metrics
+                results.forEach(res => {
+                    if (res.id === selected.id) {
+                        res.finalCompletion = completionTime;
+                        res.turnaroundTime = turnaround;
+                        res.waitingTime = waiting;
+                    }
+                });
+
+                lastProcessId = null;
+            }
+        } else {
+            // Idle time
+            if (lastProcessId !== null) {
+                const prevProc = procs.find(p => p.id === lastProcessId);
+                 results.push({
+                    id: lastProcessId,
+                    arrivalTime: prevProc.arrivalTime,
+                    burstTime: prevProc.burstTime,
+                    startTime: sliceStart,
+                    completionTime: currentTime,
+                    isIdle: false
+                });
+                lastProcessId = null;
+            }
+
+            const nextArrivals = procs.filter(p => !p.isCompleted).sort((a, b) => a.arrivalTime - b.arrivalTime);
+            if (nextArrivals.length > 0) {
+                const nextArrival = nextArrivals[0].arrivalTime;
+
+                results.push({
+                    id: 'IDLE',
+                    startTime: currentTime,
+                    completionTime: nextArrival,
+                    burstTime: nextArrival - currentTime,
+                    isIdle: true,
+                });
+                currentTime = nextArrival;
+                sliceStart = currentTime;
+            } else {
+                break; // Should not happen with completedCount check
+            }
+        }
+    }
+
+    return results;
+}
+
+/**
+ * 5. Highest Response Ratio Next (HRRN) - Non-Preemptive
+ * Selects the next process based on the response ratio:
+ * RR = (Waiting Time + Predicted Burst Time) / Predicted Burst Time
+ */
+export function calculateHRRN(processes) {
+    if (!processes || processes.length === 0) return [];
+
+    const results = [];
+    let currentTime = 0;
+    const procs = [...processes].map(p => ({ ...p, isCompleted: false }));
+    let completedCount = 0;
+
+    while (completedCount < procs.length) {
+        const available = procs.filter(p => !p.isCompleted && p.arrivalTime <= currentTime);
+
+        if (available.length > 0) {
+            // Calculate Response Ratio for all available processes
+            available.forEach(p => {
+                const waitingTime = currentTime - p.arrivalTime;
+                p.responseRatio = (waitingTime + p.burstTime) / p.burstTime;
+            });
+
+            // Sort by highest response ratio
+            available.sort((a, b) => {
+                if (b.responseRatio === a.responseRatio) return a.arrivalTime - b.arrivalTime;
+                return b.responseRatio - a.responseRatio;
+            });
+
+            const selected = available[0];
+            const start = currentTime;
+            const completion = start + selected.burstTime;
+            const turnaround = completion - selected.arrivalTime;
+            const waiting = turnaround - selected.burstTime;
+
+            results.push({
+                id: selected.id,
+                arrivalTime: selected.arrivalTime,
+                burstTime: selected.burstTime,
+                startTime: start,
+                completionTime: completion,
+                turnaroundTime: turnaround,
+                waitingTime: waiting,
+                isIdle: false,
+            });
+
+            selected.isCompleted = true;
+            completedCount++;
+            currentTime = completion;
+        } else {
+            const nextArrivals = procs.filter(p => !p.isCompleted).sort((a, b) => a.arrivalTime - b.arrivalTime);
+            if (nextArrivals.length > 0) {
+                const nextArrival = nextArrivals[0].arrivalTime;
+
+                results.push({
+                    id: 'IDLE',
+                    startTime: currentTime,
+                    completionTime: nextArrival,
+                    burstTime: nextArrival - currentTime,
+                    isIdle: true,
+                });
+                currentTime = nextArrival;
+            } else {
+                break;
+            }
+        }
+    }
+
+    return results;
+}
+
+/**
+ * 6. Least Completed Next (LCN) - Preemptive
+ * Also known as Shortest Job Next or similar variants. 
+ * Prioritizes processes that have had the least CPU time so far.
+ */
+export function calculateLCN(processes) {
+    if (!processes || processes.length === 0) return [];
+
+    const results = [];
+    let currentTime = 0;
+    let completedCount = 0;
+
+    const procs = [...processes].map(p => ({
+        ...p,
+        completedBurst: 0,
+        isCompleted: false,
+    }));
+
+    let lastProcessId = null;
+    let sliceStart = 0;
+
+    while (completedCount < procs.length) {
+        const available = procs.filter(p => !p.isCompleted && p.arrivalTime <= currentTime);
+
+        if (available.length > 0) {
+            // Prioritize process with minimal completed CPU time
+            available.sort((a, b) => {
+                if (a.completedBurst === b.completedBurst) return a.arrivalTime - b.arrivalTime;
+                return a.completedBurst - b.completedBurst;
+            });
+
+            const selected = available[0];
+
+            if (lastProcessId !== null && lastProcessId !== selected.id) {
+                const prevProc = procs.find(p => p.id === lastProcessId);
+                results.push({
+                    id: lastProcessId,
+                    arrivalTime: prevProc.arrivalTime,
+                    burstTime: prevProc.burstTime,
+                    startTime: sliceStart,
+                    completionTime: currentTime,
+                    isIdle: false
+                });
+                sliceStart = currentTime;
+            } else if (lastProcessId === null) {
+                sliceStart = currentTime;
+            }
+
+            lastProcessId = selected.id;
+            selected.completedBurst++;
+            currentTime++;
+
+            if (selected.completedBurst === selected.burstTime) {
+                selected.isCompleted = true;
+                completedCount++;
+                
+                const completionTime = currentTime;
+                const turnaround = completionTime - selected.arrivalTime;
+                const waiting = turnaround - selected.burstTime;
+
+                results.push({
+                    id: selected.id,
+                    arrivalTime: selected.arrivalTime,
+                    burstTime: selected.burstTime,
+                    startTime: sliceStart,
+                    completionTime: completionTime,
+                    isIdle: false,
+                    finalCompletion: completionTime,
+                    turnaroundTime: turnaround,
+                    waitingTime: waiting
+                });
+
+                results.forEach(res => {
+                    if (res.id === selected.id) {
+                        res.finalCompletion = completionTime;
+                        res.turnaroundTime = turnaround;
+                        res.waitingTime = waiting;
+                    }
+                });
+
+                lastProcessId = null;
+            }
+        } else {
+            if (lastProcessId !== null) {
+                const prevProc = procs.find(p => p.id === lastProcessId);
+                results.push({
+                    id: lastProcessId,
+                    arrivalTime: prevProc.arrivalTime,
+                    burstTime: prevProc.burstTime,
+                    startTime: sliceStart,
+                    completionTime: currentTime,
+                    isIdle: false
+                });
+                lastProcessId = null;
+            }
+
+            const nextArrivals = procs.filter(p => !p.isCompleted).sort((a, b) => a.arrivalTime - b.arrivalTime);
+            if (nextArrivals.length > 0) {
+                const nextArrival = nextArrivals[0].arrivalTime;
+
+                results.push({
+                    id: 'IDLE',
+                    startTime: currentTime,
+                    completionTime: nextArrival,
+                    burstTime: nextArrival - currentTime,
+                    isIdle: true,
+                });
+                currentTime = nextArrival;
+                sliceStart = currentTime;
+            } else {
+                break;
             }
         }
     }

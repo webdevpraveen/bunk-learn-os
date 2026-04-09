@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Cpu, HardDrive, MemoryStick, Play, Pause, RotateCcw } from 'lucide-react';
+import { Cpu, HardDrive, MemoryStick, Play, Pause, RotateCcw, ShieldAlert, Layers } from 'lucide-react';
 
 import ProcessInput from './components/ProcessInput';
 import ProcessTable from './components/ProcessTable';
@@ -8,12 +8,24 @@ import MemoryGrid from './components/MemoryGrid';
 import DiskChart from './components/DiskChart';
 import CalculationTable from './components/CalculationTable';
 import Footer from './components/Footer';
+import BankersAlgorithm from './components/BankersAlgorithm';
+
+import PageReplacement from './components/PageReplacement';
 
 import {
-    calculateFCFS,
+    calculateFCFS as calculateCPU_FCFS,
     calculateSJF_NonPreemptive,
     calculateRoundRobin,
+    calculateSRTF,
+    calculateHRRN,
+    calculateLCN,
 } from './utils/SchedulerLogic';
+
+import {
+    calculateSSTF,
+    calculateSCAN,
+    calculateFCFS as calculateDisk_FCFS,
+} from './utils/DiskLogic';
 
 export default function App() {
     const [activeTab, setActiveTab] = useState('Memory');
@@ -58,9 +70,12 @@ export default function App() {
     // CPU Simulation Effects
     useEffect(() => {
         if (processes.length > 0) {
-            if (cpuAlgo === 'FCFS') setCpuResults(calculateFCFS(processes));
+            if (cpuAlgo === 'FCFS') setCpuResults(calculateCPU_FCFS(processes));
             else if (cpuAlgo === 'SJF') setCpuResults(calculateSJF_NonPreemptive(processes));
             else if (cpuAlgo === 'RR') setCpuResults(calculateRoundRobin(processes, 2));
+            else if (cpuAlgo === 'SRTF') setCpuResults(calculateSRTF(processes));
+            else if (cpuAlgo === 'HRRN') setCpuResults(calculateHRRN(processes));
+            else if (cpuAlgo === 'LCN') setCpuResults(calculateLCN(processes));
         } else {
             setCpuResults([]);
         }
@@ -129,6 +144,8 @@ export default function App() {
         { id: 'CPU', label: 'CPU Scheduling', icon: <Cpu size={14} /> },
         { id: 'Memory', label: 'Memory Allocation', icon: <MemoryStick size={14} /> },
         { id: 'Disk', label: 'Disk Scheduling', icon: <HardDrive size={14} /> },
+        { id: 'Deadlock', label: 'Deadlock Avoidance', icon: <ShieldAlert size={14} /> },
+        { id: 'Page', label: 'Page Replacement', icon: <Layers size={14} /> },
     ];
 
     return (
@@ -179,6 +196,9 @@ export default function App() {
                                     <option value="FCFS">FCFS_QUEUE</option>
                                     <option value="SJF">SJF_NON_PREEMPTIVE</option>
                                     <option value="RR">ROUND_ROBIN (TQ=2)</option>
+                                    <option value="SRTF">SHORTEST_REMAINING_TIME (PREEMPTIVE)</option>
+                                    <option value="HRRN">HIGHEST_RESPONSE_RATIO</option>
+                                    <option value="LCN">LEAST_COMPLETED_NEXT (PREEMPTIVE)</option>
                                 </select>
                             </div>
                             <ProcessInput onAdd={addProcess} />
@@ -336,9 +356,30 @@ export default function App() {
                             </div>
                         </aside>
                         <section className="flex-1 w-full overflow-x-auto whitespace-nowrap">
-                            <DiskChart initialHead={initialHead} requests={trackRequests} algorithm={diskAlgo} />
+                            <DiskChart 
+                                initialHead={initialHead} 
+                                requests={trackRequests} 
+                                algorithm={diskAlgo} 
+                                calculateFCFS={calculateDisk_FCFS}
+                                calculateSSTF={calculateSSTF}
+                                calculateSCAN={calculateSCAN}
+                            />
                         </section>
                     </>
+                )}
+
+                {/* === DEADLOCK VIEW === */}
+                {activeTab === 'Deadlock' && (
+                    <div className="flex-1">
+                        <BankersAlgorithm />
+                    </div>
+                )}
+
+                {/* === PAGE REPLACEMENT VIEW === */}
+                {activeTab === 'Page' && (
+                    <div className="flex-1">
+                        <PageReplacement />
+                    </div>
                 )}
 
             </main>
