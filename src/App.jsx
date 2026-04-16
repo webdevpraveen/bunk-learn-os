@@ -5,7 +5,7 @@ import ProcessInput from './components/ProcessInput';
 import ProcessTable from './components/ProcessTable';
 import GanttChart from './components/GanttChart';
 import MemoryGrid from './components/MemoryGrid';
-import DiskChart from './components/DiskChart';
+import DiskScheduling from './components/DiskScheduling';
 import CalculationTable from './components/CalculationTable';
 import Footer from './components/Footer';
 import BankersAlgorithm from './components/BankersAlgorithm';
@@ -20,12 +20,6 @@ import {
     calculateHRRN,
     calculateLCN,
 } from './utils/SchedulerLogic';
-
-import {
-    calculateSSTF,
-    calculateSCAN,
-    calculateFCFS as calculateDisk_FCFS,
-} from './utils/DiskLogic';
 
 export default function App() {
     const [activeTab, setActiveTab] = useState('Memory');
@@ -55,17 +49,7 @@ export default function App() {
     const [newPartitionSize, setNewPartitionSize] = useState('');
     const [newMemReqSize, setNewMemReqSize] = useState('');
 
-    // --- DISK STATE ---
-    const [initialHead, setInitialHead] = useState(50);
-    const [trackRequests, setTrackRequests] = useState([
-        { id: 'T1', track: 98 }, { id: 'T2', track: 183 }, { id: 'T3', track: 37 },
-        { id: 'T4', track: 122 }, { id: 'T5', track: 14 }, { id: 'T6', track: 124 },
-        { id: 'T7', track: 65 }, { id: 'T8', track: 67 }
-    ]);
-    const [diskAlgo, setDiskAlgo] = useState('SSTF');
-
-    // Disk Input Form State
-    const [newTrackReq, setNewTrackReq] = useState('');
+    // --- DISK STATE is now handled within DiskScheduling.jsx component ---
 
     // CPU Simulation Effects
     useEffect(() => {
@@ -130,15 +114,6 @@ export default function App() {
         setNewMemReqSize('');
     };
     const handleDeleteMemReq = (id) => setMemRequests(prev => prev.filter(p => p.id !== id));
-
-    // Disk Handlers
-    const handleAddTrack = (e) => {
-        e.preventDefault();
-        if (!newTrackReq || isNaN(newTrackReq)) return;
-        setTrackRequests(prev => [...prev, { id: `T${prev.length + 1}`, track: Number(newTrackReq) }]);
-        setNewTrackReq('');
-    };
-    const handleDeleteTrack = (id) => setTrackRequests(prev => prev.filter(t => t.id !== id));
 
     const TABS = [
         { id: 'CPU', label: 'CPU Scheduling', icon: <Cpu size={14} /> },
@@ -308,64 +283,9 @@ export default function App() {
 
                 {/* === DISK VIEW === */}
                 {activeTab === 'Disk' && (
-                    <>
-                        <aside className="w-full lg:w-80 border border-slate-300 bg-white p-5 rounded-none flex-shrink-0 self-start">
-                            <div className="mb-6">
-                                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-900">Head Tracking Subroutine</label>
-                                <select
-                                    value={diskAlgo}
-                                    onChange={e => setDiskAlgo(e.target.value)}
-                                    className="w-full border-2 border-slate-300 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 outline-none focus:border-indigo-600 rounded-none cursor-pointer"
-                                >
-                                    <option value="SSTF">SHORTEST_SEEK_TIME (SSTF)</option>
-                                    <option value="SCAN">ELEVATOR_SCAN</option>
-                                </select>
-                            </div>
-
-                            <div className="mb-6">
-                                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-900">Initial Head Anchor</label>
-                                <input
-                                    type="number"
-                                    value={initialHead}
-                                    onChange={e => setInitialHead(Number(e.target.value))}
-                                    className="w-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-600 rounded-none"
-                                />
-                            </div>
-
-                            <div className="space-y-3">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-200 pb-2">Track Traversal Queue</h3>
-                                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2">
-                                    {trackRequests.map(t => (
-                                        <div key={t.id} className="flex items-center justify-between border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
-                                            <span className="font-bold text-slate-900 w-12">{t.id}</span>
-                                            <span className="text-slate-600">Track {t.track}</span>
-                                            <button onClick={() => handleDeleteTrack(t.id)} className="text-red-600 hover:text-red-800 font-bold font-sans px-2 cursor-pointer">✕</button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <form onSubmit={handleAddTrack} className="flex gap-2 mt-2">
-                                    <input
-                                        type="number"
-                                        placeholder="Track #"
-                                        value={newTrackReq}
-                                        onChange={e => setNewTrackReq(e.target.value)}
-                                        className="flex-1 w-full border border-slate-300 px-2 py-1 text-xs outline-none focus:border-indigo-600 rounded-none"
-                                    />
-                                    <button type="submit" className="bg-slate-900 text-white px-3 py-1 text-xs font-bold uppercase hover:bg-slate-800 transition-colors cursor-pointer rounded-none border border-slate-900">Add</button>
-                                </form>
-                            </div>
-                        </aside>
-                        <section className="flex-1 w-full overflow-x-auto whitespace-nowrap">
-                            <DiskChart 
-                                initialHead={initialHead} 
-                                requests={trackRequests} 
-                                algorithm={diskAlgo} 
-                                calculateFCFS={calculateDisk_FCFS}
-                                calculateSSTF={calculateSSTF}
-                                calculateSCAN={calculateSCAN}
-                            />
-                        </section>
-                    </>
+                    <div className="flex-1 overflow-x-auto">
+                        <DiskScheduling />
+                    </div>
                 )}
 
                 {/* === DEADLOCK VIEW === */}
